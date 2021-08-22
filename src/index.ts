@@ -704,6 +704,7 @@ installTransfer<
   {
     readonly port: MessagePort;
     readonly property: unknown;
+    readonly toString: string;
   }
 >("function", {
   canHandle: (value) => typeof value === "function",
@@ -752,12 +753,40 @@ installTransfer<
       {
         port: port2,
         property: value[0],
+        toString: fn.toString(),
       },
       [port2, ...transfers],
     ];
   },
-  deserialize: ({ raw: { port, property } }) => {
-    return toProxy(port, [], argvMapToArguments([property])[0]);
+  deserialize: ({ raw: { port, property, toString } }) => {
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    const noop = () => {};
+
+    const __proto__: {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, functional/prefer-readonly-type
+      [key: string]: any;
+    } = {
+      toString() {
+        return toString;
+      },
+    };
+
+    keys(Object.create(noop), true).forEach((prop) => {
+      // eslint-disable-next-line functional/immutable-data
+      __proto__[prop] = noop[prop as keyof typeof noop];
+    });
+
+    return toProxy(
+      port,
+      [],
+      argvMapToArguments([
+        {
+          ...__proto__,
+          // eslint-disable-next-line @typescript-eslint/ban-types
+          ...(property as object),
+        },
+      ])[0]
+    );
     // return (...args: any) => {
     //   const mapArgs = argumentsToArgvMap(args);
 
