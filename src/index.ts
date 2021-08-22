@@ -202,11 +202,11 @@ function toProxy(
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   const proxy = new Proxy(() => {}, {
     get(_target, p) {
-      if (
-        patch &&
-        p in path.slice(0, -1).reduce((obj, prop) => obj[prop], patch)
-      ) {
-        return path.slice(0, -1).reduce((obj, prop) => obj[prop], patch)[p];
+      const valInPatch =
+        patch && path.slice(0, -1).reduce((obj, prop) => obj[prop], patch);
+
+      if (patch && p in valInPatch) {
+        return valInPatch;
       }
 
       if (p === "then") {
@@ -467,7 +467,7 @@ function argumentsToArgvMap(
   let index = 0;
 
   // eslint-disable-next-line functional/no-loop-statement
-  loopMain: while (index < length) {
+  while (index < length) {
     const argv = argvs[index];
 
     if (weakCache?.has(argv)) {
@@ -477,26 +477,33 @@ function argumentsToArgvMap(
       continue;
     }
 
+    // eslint-disable-next-line functional/no-let
+    let stopmain = false;
     // eslint-disable-next-line functional/no-loop-statement
     for (const [transferName, transfer] of transfersInstalled.entries()) {
       if (transfer.canHandle(argv)) {
         const sr = transfer.serialize(argv, parent);
 
-        weakCache?.set(argv, sr[0]);
-        // eslint-disable-next-line functional/immutable-data
-        transfers.push(...(sr[1] || []));
-
-        // eslint-disable-next-line functional/immutable-data
-        argvMap[index] = {
+        const hydrated = {
           transfer: transferName,
           raw: sr[0],
           [transfused]: true,
         };
+        weakCache?.set(argv, hydrated);
+        // eslint-disable-next-line functional/immutable-data
+        transfers.push(...(sr[1] || []));
 
-        index++;
-        continue loopMain;
+        // eslint-disable-next-line functional/immutable-data
+        argvMap[index] = hydrated;
+
+        stopmain = true;
         break;
       }
+    }
+
+    if (stopmain) {
+      index++;
+      continue;
     }
 
     //  else if (typeof argv === "function") {
@@ -563,7 +570,7 @@ function argumentsToArgvMap(
       argvMap[index] = newArgvMapForArgv;
       // }
       index++;
-      continue loopMain;
+      continue;
     }
 
     // eslint-disable-next-line functional/immutable-data
@@ -762,7 +769,7 @@ installTransfer<
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     const noop = () => {};
 
-    const __proto__: {
+    const proto: {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any, functional/prefer-readonly-type
       [key: string]: any;
     } = {
@@ -770,22 +777,38 @@ installTransfer<
         return toString;
       },
     };
-
-    keys(Object.create(noop), true).forEach((prop) => {
-      // eslint-disable-next-line functional/immutable-data
-      __proto__[prop] = noop[prop as keyof typeof noop];
+    Object.getOwnPropertyNames(noop).forEach((prop) => {
+      // fix : TypeError: 'caller', 'callee', and 'arguments' properties may not be accessed on strict mode functions or the arguments objects for calls to them
+      switch (prop) {
+        case "caller":
+        case "calle":
+          // eslint-disable-next-line functional/immutable-data
+          proto[prop] = self;
+          break;
+        case "arguments":
+          // eslint-disable-next-line functional/immutable-data
+          proto[prop] = [];
+          break;
+        case "bind":
+        case "call":
+        case "apply":
+          break;
+        default:
+          if (typeof noop[prop as keyof typeof noop] === "function") {
+            // eslint-disable-next-line functional/immutable-data, @typescript-eslint/no-explicit-any
+            proto[prop] = (noop[prop as keyof typeof noop] as any).bind(noop);
+          } else {
+            // eslint-disable-next-line functional/immutable-data
+            proto[prop] = noop[prop as keyof typeof noop];
+          }
+      }
     });
 
     return toProxy(
       port,
       [],
-      argvMapToArguments([
-        {
-          ...__proto__,
-          // eslint-disable-next-line @typescript-eslint/ban-types
-          ...(property as object),
-        },
-      ])[0]
+      // eslint-disable-next-line functional/immutable-data
+      Object.assign(proto, argvMapToArguments([property])[0])
     );
     // return (...args: any) => {
     //   const mapArgs = argumentsToArgvMap(args);
@@ -825,7 +848,6 @@ installTransfer<
     // eslint-disable-next-line functional/no-let, @typescript-eslint/no-explicit-any
     let serialized: any;
     if (value instanceof Error) {
-      // console.log(keys(value));
       serialized = {
         isError: true,
         value: {
