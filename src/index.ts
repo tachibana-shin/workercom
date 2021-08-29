@@ -1,4 +1,4 @@
-import { decode, encode } from "base-64";
+import { atob, btoa } from "js-base64";
 
 export const createEndpoint = Symbol("workercom.endpoint");
 export const releaseProxy = Symbol("workercom.releaseProxy");
@@ -506,54 +506,13 @@ function argumentsToArgvMap(
       continue;
     }
 
-    //  else if (typeof argv === "function") {
-    //   const { port1, port2 } = new MessageChannel();
-
-    //   port1.addEventListener("message", (async (ev: MessageEvent) => {
-    //     // đây là kênh riêng của hàm này không cần uuid
-    //     const result = await argv(...(ev.data.arguments || []));
-
-    //     const { value, transfers } = argumentsToArgvMap(
-    //       Array.isArray(result) ? [...result] : [result]
-    //     );
-
-    //     // ev.data.port = port2
-    //     port2.postMessage(
-    //       {
-    //         id: ev.data.id,
-    //         arguments: value,
-    //       },
-    //       transfers
-    //     );
-    //   }) as any);
-
-    //   if (port1.start) {
-    //     port1.start();
-    //   }
-
-    //   const portForward: PortForward = {
-    //     [portForwarding]: true,
-    //     port: port2,
-    //   };
-
-    //   weakCache?.set(argv, (argvMap[index] = portForward));
-
-    //   transfers.push(port2);
-    // } else
-
     if (argv && typeof argv === "object") {
-      // if (weakCache?.has(argv)) {
-      //   argvMap[index] = weakCache.get(argv);
-      // } else {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const newArgvMapForArgv: any = Array.isArray(argv) ? [] : {};
 
       weakCache?.set(argv, newArgvMapForArgv);
 
       keys(argv).forEach((key) => {
-        //   if (key === portForwarding) {
-        //     continue;
-        //   }
         if (key === "__proto__") {
           return; // cuts
         }
@@ -625,33 +584,13 @@ function argvMapToArguments(
       }
     }
 
-    // else if (argvMap?.[portForwarding]) {
-    //   // this is callback
-
-    //   argvs[index] = (...args: any) => {
-    //     const mapArgs = argumentsToArgvMap(args);
-    //     return requestResponseMessage(
-    //       argvMap.port,
-    //       {
-    //         arguments: mapArgs.value,
-    //       },
-    //       mapArgs.transfers
-    //     ).then((res) => argvMapToArguments([res])[0]);
-    //   };
-    // } else
     if (argvMap && typeof argvMap === "object") {
-      // if (weakCache?.has(argvMap)) {
-      //   argvs[index] = weakCache.get(argvMap);
-      // } else {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const newArgvForArgvMap: any = Array.isArray(argvMap) ? [] : {};
 
       weakCache?.set(argvMap, newArgvForArgvMap);
 
       keys(argvMap, false).forEach((key) => {
-        //   if (key === portForwarding) {
-        //     continue;
-        //   }
         if (key === "__proto__") {
           return; // cuts
         }
@@ -719,36 +658,6 @@ installTransfer<
     const { port1, port2 } = new MessageChannel();
 
     expose(fn, port1, parent);
-    // port1.addEventListener("message", (async (ev: MessageEvent) => {
-    //   // eslint-disable-next-line functional/no-let
-    //   let result: any;
-
-    //   try {
-    //     result = await fn.call(
-    //       parent,
-    //       ...argvMapToArguments(ev.data.arguments || [])
-    //     );
-    //   } catch (err) {
-    //     // eslint-disable-next-line functional/immutable-data
-    //     err[throwError] = true;
-    //     result = err;
-    //   }
-
-    //   const { value, transfers } = argumentsToArgvMap([result]);
-
-    //   // ev.data.port = port2
-    //   port1.postMessage(
-    //     {
-    //       id: ev.data.id,
-    //       return: value[0],
-    //     },
-    //     [...transfers]
-    //   );
-    // }) as any);
-
-    // if (port1.start) {
-    //   port1.start();
-    // }
 
     const { value, transfers } = argumentsToArgvMap([
       Object.assign(Object.create(fn), {
@@ -810,18 +719,6 @@ installTransfer<
       // eslint-disable-next-line functional/immutable-data
       Object.assign(proto, argvMapToArguments([property])[0])
     );
-    // return (...args: any) => {
-    //   const mapArgs = argumentsToArgvMap(args);
-
-    //   return requestResponseMessage(
-    //     endpoint,
-    //     {
-    //       // type:
-    //       arguments: mapArgs.value,
-    //     },
-    //     mapArgs.transfers
-    //   ).then((ret) => argvMapToArguments([ret])[0]);
-    // };
   },
 });
 installTransfer<
@@ -868,16 +765,6 @@ installTransfer<
         // eslint-disable-next-line functional/immutable-data, @typescript-eslint/no-explicit-any
         serialized.value[prop] = (value as any)[prop];
       });
-
-      // serialized = {
-      //   isError: true,
-      //   value: {
-      //     message: value.message,
-      //     name: value.name,
-      //     stack: value.stack,
-      //     code: value.code,
-      //   },
-      // };
     } else {
       serialized = { isError: false, value };
     }
@@ -906,10 +793,10 @@ function _arrayBufferToBase64(buffer: ArrayBuffer): string {
   for (let i = 0; i < len; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
-  return encode(binary);
+  return btoa(binary);
 }
 function _base64ToArrayBuffer(base64: string): ArrayBuffer {
-  const binary_string = decode(base64);
+  const binary_string = atob(base64);
   const len = binary_string.length;
   const bytes = new Uint8Array(len);
   // eslint-disable-next-line functional/no-loop-statement, functional/no-let
