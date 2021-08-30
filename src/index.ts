@@ -789,9 +789,11 @@ function _arrayBufferToBase64(buffer: ArrayBuffer): string {
   let binary = "";
   const bytes = new Uint8Array(buffer);
   const len = bytes.byteLength;
-  // eslint-disable-next-line functional/no-loop-statement, functional/no-let
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]);
+  // eslint-disable-next-line functional/no-let
+  let i = 0;
+  // eslint-disable-next-line functional/no-loop-statement
+  while (i < len) {
+    binary += String.fromCharCode(bytes[i++]);
   }
   return btoa(binary);
 }
@@ -799,10 +801,12 @@ function _base64ToArrayBuffer(base64: string): ArrayBuffer {
   const binary_string = atob(base64);
   const len = binary_string.length;
   const bytes = new Uint8Array(len);
-  // eslint-disable-next-line functional/no-loop-statement, functional/no-let
-  for (let i = 0; i < len; i++) {
+  // eslint-disable-next-line functional/no-let
+  let i = 0;
+  // eslint-disable-next-line functional/no-loop-statement
+  while (i < len) {
     // eslint-disable-next-line functional/immutable-data
-    bytes[i] = binary_string.charCodeAt(i);
+    bytes[i] = binary_string.charCodeAt(i++);
   }
   return bytes.buffer;
 }
