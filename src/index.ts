@@ -223,7 +223,7 @@ function toProxy(
       return toProxy(endpoint, [...path, p]);
     },
     set(_target, p, value) {
-      const argvMapValue = argumentsToArgvMap(value);
+      const argvMapValue = argumentsToArgvMap([value]);
 
       if (patch) {
         // eslint-disable-next-line functional/immutable-data
@@ -340,7 +340,7 @@ export function expose(
           // eslint-disable-next-line functional/immutable-data
           parent[ev.data.path[ev.data.path.length - 1]] = argvMapToArguments(
             ev.data.value
-          );
+          )[0];
           returnValue = true;
           break;
         case MessageType.APPLY:
@@ -467,7 +467,7 @@ function argumentsToArgvMap(
   let index = 0;
 
   // eslint-disable-next-line functional/no-loop-statement
-  while (index < length) {
+  whileMain: while (index < length) {
     const argv = argvs[index];
 
     if (weakCache?.has(argv)) {
@@ -477,8 +477,6 @@ function argumentsToArgvMap(
       continue;
     }
 
-    // eslint-disable-next-line functional/no-let
-    let stopmain = false;
     // eslint-disable-next-line functional/no-loop-statement
     for (const [transferName, transfer] of transfersInstalled.entries()) {
       if (transfer.canHandle(argv)) {
@@ -496,14 +494,8 @@ function argumentsToArgvMap(
         // eslint-disable-next-line functional/immutable-data
         argvMap[index] = hydrated;
 
-        stopmain = true;
-        break;
+        break whileMain;
       }
-    }
-
-    if (stopmain) {
-      index++;
-      continue;
     }
 
     if (argv && typeof argv === "object") {
