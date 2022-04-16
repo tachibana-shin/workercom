@@ -816,8 +816,8 @@ const TypedArrayConstructors = [
   Uint32Array,
   Float32Array,
 
-  BigInt64Array,
-  BigUint64Array,
+  typeof BigInt64Array !== "undefined" ? BigInt64Array : Int8Array,
+  typeof BigUint64Array !== "undefined" ? BigUint64Array : Int8Array,
   Float64Array,
 ];
 
