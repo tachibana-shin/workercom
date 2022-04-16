@@ -16,24 +16,24 @@ type Unpromisify<P> = P extends Promise<infer T> ? T : P;
 export type Remote<T> =
   // Handle properties
   RemoteObject<T> &
-    // Handle call signature (if present)
-    (T extends (...args: infer TArguments) => infer TReturn
-      ? (
-          ...args: {
-            readonly [I in keyof TArguments]: TArguments[I];
-          }
-        ) => Promisify<Unpromisify<TReturn>>
-      : unknown) &
-    (T extends { new (...args: infer TArguments): infer TInstance }
-      ? {
-          new (
-            ...args: {
-              readonly [I in keyof TArguments]: TArguments[I];
-            }
-          ): Promisify<Remote<TInstance>>;
+  // Handle call signature (if present)
+  (T extends (...args: infer TArguments) => infer TReturn
+    ? (
+      ...args: {
+        readonly [I in keyof TArguments]: TArguments[I];
+      }
+    ) => Promisify<Unpromisify<TReturn>>
+    : unknown) &
+  (T extends { new(...args: infer TArguments): infer TInstance }
+    ? {
+      new(
+        ...args: {
+          readonly [I in keyof TArguments]: TArguments[I];
         }
-      : unknown) &
-    ProxyMethods;
+      ): Promisify<Remote<TInstance>>;
+    }
+    : unknown) &
+  ProxyMethods;
 
 type RemoteObject<T> = { readonly [P in keyof T]: RemoteProperty<T[P]> };
 
@@ -52,19 +52,19 @@ type Local<T> = Omit<LocalObject<T>, keyof ProxyMethods> &
   // Handle call signatures (if present)
   (T extends (...args: infer TArguments) => infer TReturn
     ? (
+      ...args: {
+        readonly [I in keyof TArguments]: TArguments[I];
+      }
+    ) => MaybePromise<Unpromisify<TReturn>>
+    : unknown) &
+  (T extends { new(...args: infer TArguments): infer TInstance }
+    ? {
+      new(
         ...args: {
           readonly [I in keyof TArguments]: TArguments[I];
         }
-      ) => MaybePromise<Unpromisify<TReturn>>
-    : unknown) &
-  (T extends { new (...args: infer TArguments): infer TInstance }
-    ? {
-        new (
-          ...args: {
-            readonly [I in keyof TArguments]: TArguments[I];
-          }
-        ): MaybePromise<Local<Unpromisify<TInstance>>>;
-      }
+      ): MaybePromise<Local<Unpromisify<TInstance>>>;
+    }
     : unknown);
 
 enum MessageType {
@@ -121,32 +121,32 @@ function generateUUID(): string {
 // eslint-disable-next-line @typescript-eslint/ban-types
 type Message = {} & (
   | {
-      readonly type: MessageType.GET;
-      readonly path: readonly string[];
-    }
+    readonly type: MessageType.GET;
+    readonly path: readonly string[];
+  }
   | {
-      readonly type: MessageType.SET;
-      readonly path: readonly string[];
-      readonly value: unknown;
-    }
+    readonly type: MessageType.SET;
+    readonly path: readonly string[];
+    readonly value: unknown;
+  }
   | {
-      readonly type: MessageType.ENDPOINT;
-    }
+    readonly type: MessageType.ENDPOINT;
+  }
   | {
-      readonly type: MessageType.RELEASE;
-    }
+    readonly type: MessageType.RELEASE;
+  }
   | {
-      readonly type: MessageType.APPLY;
-      readonly path: readonly string[];
-      // eslint-disable-next-line functional/functional-parameters
-      readonly arguments: readonly unknown[];
-    }
+    readonly type: MessageType.APPLY;
+    readonly path: readonly string[];
+    // eslint-disable-next-line functional/functional-parameters
+    readonly arguments: readonly unknown[];
+  }
   | {
-      readonly type: MessageType.CONSTRUCT;
-      readonly path: readonly string[];
-      // eslint-disable-next-line functional/functional-parameters
-      readonly arguments: readonly unknown[];
-    }
+    readonly type: MessageType.CONSTRUCT;
+    readonly path: readonly string[];
+    // eslint-disable-next-line functional/functional-parameters
+    readonly arguments: readonly unknown[];
+  }
 );
 
 function requestResponseMessage(
@@ -200,7 +200,7 @@ function toProxy(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any {
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  const proxy = new Proxy(() => {}, {
+  const proxy = new Proxy(() => { }, {
     get(_target, p) {
       const valInPatch =
         patch && path.slice(0, -1).reduce((obj, prop) => obj[prop], patch);
@@ -365,7 +365,8 @@ export function expose(
         default:
           return void 0;
       }
-    } catch (err) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
       // eslint-disable-next-line functional/immutable-data
       err[throwError] = true;
       returnValue = Promise.reject(err);
@@ -668,7 +669,7 @@ installTransfer<
   },
   deserialize: ({ raw: { port, property, toString } }) => {
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-    const noop = () => {};
+    const noop = () => { };
 
     const proto: {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any, functional/prefer-readonly-type
@@ -716,20 +717,20 @@ installTransfer<
 installTransfer<
   | Error
   | {
-      readonly [throwError]: true;
-      readonly [prop: string]: unknown;
-    },
+    readonly [throwError]: true;
+    readonly [prop: string]: unknown;
+  },
   {
     readonly isError: boolean;
     readonly value:
-      | {
-          readonly message: string;
-          readonly name: string;
-          readonly stack: string;
-          readonly [prop: string]: unknown;
-        }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      | any;
+    | {
+      readonly message: string;
+      readonly name: string;
+      readonly stack: string;
+      readonly [prop: string]: unknown;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    | any;
   }
 >("error", {
   canHandle: (value) => value instanceof Error || value?.[throwError],

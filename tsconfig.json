@@ -37,7 +37,7 @@
       "ESNext.Intl",
       "ESNext.Promise",
       "ESNext.Symbol",
-      "ESNext.WeakRef",
+      "ES2021.WeakRef",
       "ESNext.AsyncIterable",
       "WebWorker"
     ],
