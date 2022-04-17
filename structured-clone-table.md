@@ -3,7 +3,9 @@
 [Structured clone] is JavaScript’s algorithm to create “deep copies” of values. It is used for `postMessage()` and therefore is used extensively under the hood with Workercom. By default, every function parameter and function return value is structured cloned. Here is a table of how the structured clone algorithm handles different kinds of values. Or to phrase it differently: If you pass a value from the left side as a parameter into a proxy’d function, the actual function code will get what is listed on the right side.
 
 <span style="color: #F9A825"> Yellow </span>: Can full copy if [installTransfer](./README.md#API-Workercom\.installTransfer(name,-transferables)`-&-`Comlink\.proxy)
+
 <span style="color: #76FF03"> Green </span>: Can full copy by transfer installed default
+
 <span style="color: #FF3D00"> Warning </span>: Can't copy if you don't have transfer installed
 
 
