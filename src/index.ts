@@ -365,7 +365,7 @@ export function expose(
         default:
           return void 0;
       }
-    } catch (err) {
+    } catch (err: any) {
       // eslint-disable-next-line functional/immutable-data
       err[throwError] = true;
       returnValue = Promise.reject(err);
